@@ -1,7 +1,7 @@
 # Getting and Cleaning Data: Course Project
-#
+
 This repository contains (aside from README.md):
-#
+
 run_analysis: R Script file containing the codes for the processing of the project output.
 
 CodeBook.md: R Markdown file containing the descriptive details about the codes and the variables used in the processing.
