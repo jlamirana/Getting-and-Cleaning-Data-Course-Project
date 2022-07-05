@@ -1,0 +1,140 @@
+---
+title: "CodeBook"
+author: "Lloyd M."
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#strings
+time: time domain signals
+freq: frequency domain signals
+Body: body signals
+Gravity: Gravity signals
+Acc: linear acceleration signals
+Gyro: gyroscope signals
+Angular-velocity: angular velocity signals
+Jerk: Jerk signals
+Mag: the magnitude of these three-dimensional signals calculated using the Euclidean norm
+mean: mean
+std-dev: standard deviation
+-X/-Y/-Z: data of X/Y/Z axis
+
+#variables
+ [1] "subject"                                 "activity"                               
+ [3] "t.body-acc.mean...X"                     "t.body-acc.mean...Y"                    
+ [5] "t.body-acc.mean...Z"                     "t.gravity-acc.mean...X"                 
+ [7] "t.gravity-acc.mean...Y"                  "t.gravity-acc.mean...Z"                 
+ [9] "t.body-acc-jerk.mean...X"                "t.body-acc-jerk.mean...Y"               
+[11] "t.body-acc-jerk.mean...Z"                "t.body-gyro.mean...X"                   
+[13] "t.body-gyro.mean...Y"                    "t.body-gyro.mean...Z"                   
+[15] "t.body-gyro-jerk.mean...X"               "t.body-gyro-jerk.mean...Y"              
+[17] "t.body-gyro-jerk.mean...Z"               "t.body-acc-mag.mean.."                  
+[19] "t.gravity-acc-mag.mean.."                "t.body-acc-jerk-mag.mean.."             
+[21] "t.body-gyro-mag.mean.."                  "t.body-gyro-jerkMag.mean.."             
+[23] "f.body-acc.mean...X"                     "f.body-acc.mean...Y"                    
+[25] "f.body-acc.mean...Z"                     "f.body-acc.freq-mean...X"               
+[27] "f.body-acc.freq-mean...Y"                "f.body-acc.freq-mean...Z"               
+[29] "f.body-acc-jerk.mean...X"                "f.body-acc-jerk.mean...Y"               
+[31] "f.body-acc-jerk.mean...Z"                "f.body-acc-jerk.freq-mean...X"          
+[33] "f.body-acc-jerk.freq-mean...Y"           "f.body-acc-jerk.freq-mean...Z"          
+[35] "f.body-gyro.mean...X"                    "f.body-gyro.mean...Y"                   
+[37] "f.body-gyro.mean...Z"                    "f.body-gyro.freq-mean...X"              
+[39] "f.body-gyro.freq-mean...Y"               "f.body-gyro.freq-mean...Z"              
+[41] "f.body-acc-mag.mean.."                   "f.body-acc-mag.freq-mean.."             
+[43] "f.body-acc-jerk-mag.mean.."              "f.body-acc-jerk-mag.freq-mean.."        
+[45] "f.body-gyro-mag.mean.."                  "f.body-gyro-mag.freq-mean.."            
+[47] "f.body-acc-gyro-jerk-mag.mean.."         "f.body-acc-gyro-jerk-mag.freq-mean.."   
+[49] "angle.tbody-acc-mean.gravity."           "angle.tbody-acc-jerkMean..gravity-mean."
+[51] "angle.tbody-gyro-mean.gravity-mean."     "angle.tbody-gyro-jerkMean.gravity-mean."
+[53] "angle.X.gravity-mean."                   "angle.Y.gravity-mean."                  
+[55] "angle.Z.gravity-mean."                  
+
+#Course Project
+
+First phase of processing and manipulating the datasets collected is to load the "dplyr" function package. This package enables us to efficiently create that kind of format for the dataframe we want to form out of our datasets.
+
+```
+library(dplyr)
+```
+
+Given the link, where we can download the datasets that we are going to be using for the data extraction and for the sake of reproducing this stage, We can simply put the file name in a new variable, which in this case is the **file_name** variable, just to make the process of passing arguments to the **download.file function** even simpler and more readable for any evaluation purposes.
+
+```
+file_name <- "getdata_projectfiles_UCI HAR Dataset.zip"
+
+if(!file.exists(file_name)) {
+  url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+  download.file(url, destfile = file_name) #note: add "method = curl" as the third arg mac/linux users
+  unzip(file_name)
+}
+```
+
+Next, we may proceed to extract the data from text files we got and extracted from the downloaded file using the **read.table** function. The variable names are directly assigned after the corresponding file names.
+
+```
+activities <- read.table("UCI HAR Dataset/activity_labels.txt", col.names = c("code","activity"))
+features  <- read.table("UCI HAR Dataset/features.txt", col.names = c("code","signal"))
+
+#train datasets
+sub_train <- read.table("UCI HAR Dataset/train/subject_train.txt", col.names = "subject")
+x_train <- read.table("UCI HAR Dataset/train/X_train.txt", col.names = features$signal)
+y_train <- read.table("UCI HAR Dataset/train/Y_train.txt", col.names = "activity")
+
+#test datasets
+sub_test <- read.table("UCI HAR Dataset/test/subject_test.txt", col.names = "subject")
+x_test <- read.table("UCI HAR Dataset/test/X_test.txt", col.names = features$signal)
+y_test <- read.table("UCI HAR Dataset/test/Y_test.txt", col.names = "activity")
+```
+
+In this stage, we are gradually combining all the collective pieces of dataset into a whole piece of dataset and tidying up these pieces using the **select** function, which then be put in a variable name called **tiny_data**. 
+
+```
+#combining train and test datasets
+subject <- rbind(sub_train, sub_test)
+x_dataset <- rbind(x_train, x_test)
+y_dataset <- rbind(y_train, y_test)
+merged_dataset <- cbind(subject, y_dataset, x_dataset)
+
+#extracting only the measurements on the mean and standard deviation for each measurement
+tidy_data <- select(merged_dataset, subject, activity, contains("mean"), contains("sd"))
+
+#naming the activities in the data set using descriptive activity names
+tidy_data$activity <- activities[tidy_data$activity, 2]
+```
+
+After the datasets have been combined, we may jump right in to configure other features in the case of the format of the output. Variable names have been changed into a much more descriptive names using the conventional way of assigning - together with the **gsub** function.
+
+```
+#setting descriptive variable names
+names(tidy_data) = (gsub("^t", "t.", names(tidy_data)))
+names(tidy_data) = (gsub("^f", "f.", names(tidy_data)))
+names(tidy_data) = (gsub("BodyBody", "body-", names(tidy_data)))
+names(tidy_data) = (gsub("BodyAccJerkMag", "body-acc-jerk-mag", names(tidy_data)))
+names(tidy_data) = (gsub("BodyAccJerk", "body-acc-jerk", names(tidy_data)))
+names(tidy_data) = (gsub("BodyGyroJerk", "body-gyro-jerk", names(tidy_data)))
+names(tidy_data) = (gsub("BodyGyroMag", "body-gyro-mag", names(tidy_data)))
+names(tidy_data) = (gsub("AccJerkMag", "acc-jerk-mag", names(tidy_data)))
+names(tidy_data) = (gsub("BodyGyroJerkMag", "body-gyro-jerk-mag", names(tidy_data)))
+names(tidy_data) = (gsub("GyroJerkMag", "acc-gyro-jerk-mag", names(tidy_data)))
+names(tidy_data) = (gsub("BodyAccMag", "body-acc-mag", names(tidy_data)))
+names(tidy_data) = (gsub("GravityAccMag", "gravity-acc-mag", names(tidy_data)))
+names(tidy_data) = (gsub("GravityAcc", "gravity-acc", names(tidy_data)))
+names(tidy_data) = (gsub("gravityMean", "gravity-mean", names(tidy_data)))
+names(tidy_data) = (gsub("meanFreq", "freq-mean", names(tidy_data)))
+names(tidy_data) = (gsub("BodyAcc", "body-acc", names(tidy_data)))
+names(tidy_data) = (gsub("BodyGyro", "body-gyro", names(tidy_data)))
+names(tidy_data) = (gsub("GyroMag", "gyro-mag", names(tidy_data)))
+names(tidy_data) = (gsub("gyroMean", "gyro-mean", names(tidy_data)))
+names(tidy_data) = (gsub("accMean", "acc-mean", names(tidy_data)))
+```
+
+Once the process is done, we may give in to finalize and summarize the dataset using the **group_by** and **summarise** functions and eventually write the finalized data on a new text file using the **write.table** function. 
+
+```
+#grouping-by and exporting into csv file
+final_data <- group_by(tidy_data, subject, activity)
+write.csv(final_data, "tidy_data.csv", row.names = T)
+str(final_data)
+```
